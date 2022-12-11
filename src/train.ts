@@ -9,10 +9,10 @@ const main = async () => {
     
     
     const params = {
-        denseUnits: 30,
-        learningRate: 0.0001,
-        batchSize: 10,
-        epochs: 50,
+        denseUnits: 64,
+        learningRate: 0.01,
+        batchSize: 16,
+        epochs: 60,
     };
     
     const numClasses = 2;
@@ -23,17 +23,18 @@ const main = async () => {
     const model = tf.sequential({
         layers: [
             tf.layers.dense({
-                inputShape: [10, 34],
+                // inputShape: [10, 34],
+                inputDim: 34,
                 units: params.denseUnits,
                 activation: "relu",
                 kernelInitializer: varianceScaling,
                 useBias: true,
             }),
-            tf.layers.dropout({ rate: 0.5 }),
+            tf.layers.dropout({ rate: 0.05 }),
             tf.layers.dense({
                 units: numClasses,
                 kernelInitializer: varianceScaling,
-                useBias: false,
+                useBias: true,
                 activation: "softmax",
             }),
         ],
@@ -42,8 +43,8 @@ const main = async () => {
     const optimizer = tf.train.rmsprop(params.learningRate);
     
     model.compile({
-        optimizer,
-        loss: "categoricalCrossentropy",
+        optimizer: "Adam",
+        loss: "binaryCrossentropy",
         metrics: ["accuracy"],
     });
     
