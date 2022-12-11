@@ -7,6 +7,17 @@ For the web app, please refer to [this repo](https://github.com/SnowSuno/posture
 
 To see the demo, please visit [here](https://supose.vercel.app/).
 
+### Getting started
+
+```bash
+yarn
+yarn train
+```
+
+When training is finished, the model will be saved in `./model` folder.
+Serve this model with the [frontend](https://github.com/SnowSuno/posture-detection).
+
+
 ### Used technologies
 
 - [Node.js](https://nodejs.org/)
