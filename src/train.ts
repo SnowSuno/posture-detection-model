@@ -1,5 +1,5 @@
 import { loadDatasets } from "./dataset";
-import { datasetPath } from "./path";
+import { datasetPath, modelPath } from "./path";
 import * as tf from "@tensorflow/tfjs-node";
 
 const main = async () => {
@@ -59,7 +59,7 @@ const main = async () => {
     
     optimizer.dispose();
     
-    return model;
+    await model.save(modelPath("model1"));
 };
 
 main().catch(console.error);
