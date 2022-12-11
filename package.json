@@ -4,6 +4,9 @@
   "main": "src/index.ts",
   "author": "SnowSuno",
   "license": "MIT",
+  "scripts": {
+    "train": "ts-node src/train.ts"
+  },
   "dependencies": {
     "@mediapipe/pose": "^0.5.1635988162",
     "@tensorflow-models/pose-detection": "^2.0.0",
@@ -11,5 +14,8 @@
     "@tensorflow/tfjs-node": "^4.1.0",
     "globby": "^11.0.4",
     "typescript": "^4.9.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.1"
   }
 }

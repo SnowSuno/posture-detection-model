@@ -1,11 +1,12 @@
+import { loadDatasets } from "./dataset";
+import { datasetPath } from "./path";
 import * as tf from "@tensorflow/tfjs-node";
-import { loadDatasets } from "../dataset_";
 
 const main = async () => {
-    const examples: Float32Array[][] = [
-        [],
-        [],
-    ];
+    const { trainDataset, validationDataset } = await loadDatasets(
+        datasetPath("dataset1"),
+    );
+    
     
     const params = {
         denseUnits: 30,
@@ -14,15 +15,15 @@ const main = async () => {
         epochs: 50,
     };
     
-    const numClasses = examples.length;
-    const inputSize = examples[0][0].length;
+    const numClasses = 2;
+    const inputSize = trainDataset.size;
     
     const varianceScaling = tf.initializers.varianceScaling({});
     
     const model = tf.sequential({
         layers: [
             tf.layers.dense({
-                inputShape: [inputSize],
+                inputShape: [10, 34],
                 units: params.denseUnits,
                 activation: "relu",
                 kernelInitializer: varianceScaling,
@@ -46,12 +47,10 @@ const main = async () => {
         metrics: ["accuracy"],
     });
     
-    const { trainDataset, validationDataset } = await loadDatasets();
     
     const trainData = trainDataset.batch(params.batchSize);
     const validationData = validationDataset.batch(params.batchSize);
     
-
     await model.fitDataset(trainData, {
         epochs: params.epochs,
         validationData,
@@ -60,7 +59,6 @@ const main = async () => {
     optimizer.dispose();
     
     return model;
-    
 };
 
-main()
+main().catch(console.error);

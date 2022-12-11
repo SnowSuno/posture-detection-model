@@ -1,74 +1,35 @@
-import * as fs from "fs";
-
-import * as tf from "@tensorflow/tfjs-node";
 import * as poseDetection from "@tensorflow-models/pose-detection";
-import { Tensor3D } from "@tensorflow/tfjs-core";
-import { encodeKeypoints } from "./utils";
-import { globby } from "globby";
+import fs from "fs";
+import * as tf from "@tensorflow/tfjs-node";
+import globby from "globby";
+import { flatKeypointsToArray, flatOneHot } from "../utils";
+import { PixelInput, Sample } from "../utils/types";
+import { PoseDetector } from "@tensorflow-models/pose-detection";
 
-const size = 400;
-
-type PixelInput =
-    | Tensor3D
-    | ImageData
-    | HTMLVideoElement
-    | HTMLImageElement
-    | HTMLCanvasElement
-    | ImageBitmap;
-
-interface Sample {
-    data: Float32Array,
-    label: number[],
-}
-
-const VALIDATION_FRACTION = 0.15;
-
-const flatOneHot = (label: number, size: number): number[] => {
-    const labelOneHot = new Array(size).fill(0);
-    labelOneHot[label] = 1;
-    return labelOneHot;
+const loadImageData = async (path: string) => {
+    const jpeg = fs.readFileSync(path);
+    
+    return tf.node.decodeJpeg(jpeg);
+};
+const getPose = async (detector: PoseDetector, image: PixelInput) => {
+    const res = await detector.estimatePoses(image);
+    
+    if (!res[0]) console.log("no pose detected");
+    
+    return res[0];
 };
 
-export const loadDatasets = async () => {
+export const loadDatasets = async (datasetPath: string) => {
     const detector = await poseDetection.createDetector(
         poseDetection.SupportedModels.MoveNet,
         {
             modelType: poseDetection.movenet.modelType.MULTIPOSE_LIGHTNING,
             enableTracking: true,
             trackerType: poseDetection.TrackerType.BoundingBox,
-            
         },
     );
-    // const detector = await poseDetection.createDetector(
-    //     poseDetection.SupportedModels.BlazePose,
-    //     {
-    //         runtime: "tfjs",
-    //         enableSmoothing: true,
-    //         modelType: "full",
-    //         enableSegmentation: true,
-    //     },
-    // );
     
-    const loadImageData = async (path: string) => {
-        // const canvas = new Canvas(size, size);
-        // const ctx = canvas.getContext("2d");
-        //
-        // const image = await loadImage(path);
-        // ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-        //
-        // return ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const jpeg = fs.readFileSync(path);
-        
-        return tf.node.decodeJpeg(jpeg);
-    };
-    
-    const getPose = async (image: PixelInput) => {
-        const res = await detector.estimatePoses(image);
-        
-        return res[0];
-    };
-    
-    const datasetPath = "../dataset/test";
+    // const datasetPath = "./dataset/test";
     
     const classes = [0, 1];
     const dataSetFiles = await Promise.all(
@@ -79,14 +40,17 @@ export const loadDatasets = async () => {
         }),
     );
     
-    const sampleDataset = async (dataset: string[][], validation: boolean) => {
+    const sampleDataset = async (
+        dataset: string[][],
+        validation: boolean,
+        validationFraction: number = 0.15,
+    ) => {
         return dataset.map(dataClass => {
-            const validationCount = Math.ceil(dataClass.length * VALIDATION_FRACTION);
+            const validationCount = Math.ceil(dataClass.length * validationFraction);
             
             return validation
                 ? dataClass.slice(0, validationCount)
                 : dataClass.slice(validationCount);
-            
         });
     };
     
@@ -94,10 +58,13 @@ export const loadDatasets = async () => {
     const validationDatasetFlies = await sampleDataset(dataSetFiles, true);
     
     const getDataset = async (filesNames: string[][]): Promise<Sample[]> => {
-        const samples: Sample[][] = await Promise.all(filesNames.map((classFiles, classIndex) =>
+        const samples = await Promise.all(filesNames.map((classFiles, classIndex) =>
             Promise.all(classFiles.map(async (fileName) => {
+                console.log("processing", fileName);
                 const imageData = await loadImageData(fileName);
-                const pose = await getPose(imageData);
+                const pose = await getPose(detector, imageData);
+                
+                if (!pose) return null;
                 
                 const size = 224;
                 if (imageData.size !== 3 * size * size) throw new Error(`Unexpected image size: ${imageData.size}`);
@@ -107,13 +74,13 @@ export const loadDatasets = async () => {
                 );
                 
                 return {
-                    data: encodeKeypoints(normalizedKeypoints),
+                    data: flatKeypointsToArray(normalizedKeypoints),
                     label: flatOneHot(classIndex, classes.length),
                 };
             })),
         ));
         
-        return samples.flat();
+        return samples.flat().filter(Boolean) as Sample[];
     };
     
     const trainDataset = await getDataset(trainDatasetFiles);

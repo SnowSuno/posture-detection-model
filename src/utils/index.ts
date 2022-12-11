@@ -1,2 +1,2 @@
-export * from "./encodeKeypoints";
+export * from "./encode";
 export * from "./convertToTfDataset";

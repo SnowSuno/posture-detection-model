@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as tf from "@tensorflow/tfjs-node";
 import * as poseDetection from "@tensorflow-models/pose-detection";
 import { Tensor3D } from "@tensorflow/tfjs-core";
-import { encodeKeypoints } from "./utils";
+import { flatKeypointsToArray } from "./utils";
 // import { globby } from "globby";
 import globby from "globby";
 
@@ -71,7 +71,7 @@ export const loadDatasets = async () => {
         return res[0];
     };
     
-    const datasetPath = "../dataset/test";
+    const datasetPath = "./dataset/test";
     
     const classes = [0, 1];
     const dataSetFiles = await Promise.all(
@@ -99,6 +99,7 @@ export const loadDatasets = async () => {
     const getDataset = async (filesNames: string[][]): Promise<Sample[]> => {
         const samples = await Promise.all(filesNames.map((classFiles, classIndex) =>
             Promise.all(classFiles.map(async (fileName) => {
+                console.log("processing", fileName);
                 const imageData = await loadImageData(fileName);
                 const pose = await getPose(imageData);
                 
@@ -113,7 +114,7 @@ export const loadDatasets = async () => {
                 
                 
                 return {
-                    data: encodeKeypoints(normalizedKeypoints),
+                    data: flatKeypointsToArray(normalizedKeypoints),
                     label: flatOneHot(classIndex, classes.length),
                 };
             })),
@@ -196,5 +197,6 @@ const main = async () => {
     return model;
 };
 
+console.log("Start")
 main();
 
